@@ -10,7 +10,7 @@ from tensorflow import keras
 df = pd.read_csv('data/data_inflasi.csv')
 df['Year'] = pd.to_datetime(df['Year'], format='%b %Y')
 
-def create_sequences(data, timesteps=5):
+def create_sequences(data, timesteps=10):
     X, y = [], []
     for i in range(len(data) - timesteps):
         X.append(data[i:i+timesteps])
@@ -23,7 +23,7 @@ def arima_lstm_pred(data):
     prg.progress(10, text="Operation in progress. Please wait.")
 
     # Step 1: Fit ARIMA model
-    arima_order = (3, 1, 3)  # Adjust based on ACF/PACF analysis
+    arima_order = (3, 1, 4)  # Adjust based on ACF/PACF analysis
     arima_model = ARIMA(data, order=arima_order)
     arima_fit = arima_model.fit()
     prg.progress(30, text="Operation in progress. Please wait.")
@@ -33,7 +33,7 @@ def arima_lstm_pred(data):
     residuals = data - arima_pred
 
     # Pembagian data training dan data testing (80% untuk training, 20% untuk testing)
-    train_size = int(len(df) * 0.8)
+    train_size = int(len(df) * 0.9)
     data_training = data[:train_size]
     data_testing = data[train_size:]
 
@@ -44,24 +44,31 @@ def arima_lstm_pred(data):
     prg.progress(50, text="Operation in progress. Please wait.")
 
     # Menentukan jumlah timesteps untuk LSTM
-    timesteps = 5
+    timesteps = 10
     X_train, y_train = create_sequences(data_scaled_training, timesteps)
     X_test, y_test = create_sequences(data_scaled_testing, timesteps)
 
     # Membangun Model LSTM
-    model = keras.models.Sequential([
-        keras.layers.LSTM(50, activation='relu',  input_shape=(timesteps, 1)),
-        keras.layers.Dense(1)
-    ])
+    model = Sequential()
+    model.add(LSTM(64, activation='relu', return_sequences=True,
+                   input_shape=(X_train.shape[1], X_train.shape[2]),
+                   kernel_regularizer=l2(0.01)))
+    model.add(Dropout(0.5))  
+    model.add(LSTM(64, activation='relu', kernel_regularizer=l2(0.01)))
+    model.add(Dropout(0.3))
+    model.add(Dense(1))
 
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='mse')
+    model.compile(optimizer=Adam(learning_rate=0.01), loss='mse')
     prg.progress(70, text="Operation in progress. Please wait.")
 
+    # Callback (Early Stopping)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
     # Melatih model LSTM
-    model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1, shuffle=False, validation_data=(X_test, y_test))
+    model.fit(X_train, y_train, epochs=50, batch_size=64, validation_data=(X_test, y_test), callbacks=[early_stopping], verbose=1)
     prg.progress(85, text="Operation in progress. Please wait.")
 
-    # Forecast 12 bulan ke depan
+    # Forecast bulan depan
     future_steps = 1
     future_inputs = data_scaled_testing[-timesteps:]  # Ambil window terakhir dari data uji
     future_predictions_lstm = []
