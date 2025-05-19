@@ -28,6 +28,10 @@ def arima_lstm_pred(data):
     arima_fit = arima_model.fit()
     prg.progress(30, text="Operation in progress. Please wait.")
 
+    # Tambahkan tampilan summary ARIMA
+    st.subheader("Ringkasan Model ARIMA")
+    st.text(arima_fit.summary())
+
     # ARIMA predictions
     arima_pred = arima_fit.predict(start=0, end=len(data)-1, typ='levels')
     residuals = data - arima_pred
@@ -68,6 +72,23 @@ def arima_lstm_pred(data):
     model.fit(X_train, y_train, epochs=50, batch_size=64, validation_data=(X_test, y_test), callbacks=[early_stopping], verbose=1)
     prg.progress(85, text="Operation in progress. Please wait.")
 
+    # Tambahkan tampilan summary model LSTM
+    st.subheader("Ringkasan Arsitektur Model LSTM")
+    model_summary = []
+    model.summary(print_fn=lambda x: model_summary.append(x))
+    st.text('\n'.join(model_summary))
+
+    # Visualisasi history loss
+    st.subheader("Grafik Loss Model LSTM")
+    fig, ax = plt.subplots()
+    ax.plot(history.history['loss'], label='Training Loss')
+    ax.plot(history.history['val_loss'], label='Validation Loss')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_title('Training vs Validation Loss')
+    ax.legend()
+    st.pyplot(fig)
+
     # Forecast bulan depan
     future_steps = 1
     future_inputs = data_scaled_testing[-timesteps:]  # Ambil window terakhir dari data uji
@@ -76,13 +97,10 @@ def arima_lstm_pred(data):
     for _ in range(future_steps):
         # Ubah bentuk data agar sesuai dengan input model LSTM
         future_inputs_reshaped = future_inputs.reshape(1, timesteps, 1)
-
         # Prediksi menggunakan model LSTM
         lstm_pred_scaled = model.predict(future_inputs_reshaped)
-
         # Simpan hasil prediksi
         future_predictions_lstm.append(lstm_pred_scaled[0, 0])
-
         # Perbarui input dengan menggeser ke belakang dan menambahkan prediksi baru
         future_inputs = np.append(future_inputs[1:], lstm_pred_scaled, axis=0)
 
