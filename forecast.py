@@ -57,22 +57,6 @@ def arima_lstm_pred(data):
     # Prediksi ARIMA
     arima_pred = arima_fit.predict(start=0, end=len(data_inflasi)-1, typ='levels')
     residuals = data_inflasi - arima_pred
-    
-    # Visualize ARIMA predictions vs actual data
-    st.subheader("Perbandingan Prediksi ARIMA dengan Data Aktual")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    if 'Year' in data.columns:
-        ax.plot(data['Year'], data_inflasi, label='Data Aktual')
-        ax.plot(data['Year'], arima_pred, label='Prediksi ARIMA')
-    else:
-        ax.plot(data_inflasi, label='Data Aktual')
-        ax.plot(arima_pred, label='Prediksi ARIMA')
-    ax.set_xlabel('Periode')
-    ax.set_ylabel('Inflasi (%)')
-    ax.set_title('Perbandingan Prediksi ARIMA dengan Data Aktual')
-    ax.legend()
-    ax.grid(True)
-    st.pyplot(fig)
 
     # Split data
     train_size = int(len(data_inflasi) * 0.9)
@@ -170,8 +154,6 @@ def arima_lstm_pred(data):
 
 # -----------------------------------------------------------------------------
 # Draw the actual page
-st.set_page_config(page_title="Prediksi Inflasi", layout="wide")
-
 st.title("Prediksi Inflasi Bulan Selanjutnya")
 st.markdown("""
     Aplikasi ini menggunakan model hybrid ARIMA dan LSTM untuk memprediksi inflasi
